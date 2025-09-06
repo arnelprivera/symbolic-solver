@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symbolic Solver</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #8a1e50;
+            margin: 0;
+            padding: 0;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #game-container {
+            max-width: 800px;
+            width: 100%;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #board {
+            display: grid;
+            grid-template-columns: repeat(6, 80px);
+            gap: 5px;
+            background-color: #fff;
+            padding: 10px;
+            border: 3px solid #333;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 518px;
+            margin: 20px auto;
+        }
+        .space {
+            width: 75px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #000;
+            font-size: 14px;
+            font-weight: bold;
+            position: relative;
+            transition: border 0.3s ease, box-shadow 0.3s ease;
+            color: #333;
+        }
+        .space:nth-child(1),
+        .space:nth-child(6),
+        .space:nth-child(25),
+        .space:nth-child(30) {
+            border: 2px solid #000;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+        .element { background-color: #d3d3d3; }
+        .formula { background-color: #90EE90; }
+        .challenge { background-color: #FFFFE0; }
+        .penalty { background-color: #FF6347; }
+        .start { background-color: #00BFFF; }
+        .finish { background-color: #FFD700; }
+        .player1 {
+            border: 3px solid #FFA500;
+            box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
+        }
+        .player2 {
+            border: 3px solid #FFFF99;
+            box-shadow: 0 0 8px rgba(255, 255, 153, 0.6);
+        }
+        .both-players {
+            border-top: 3px solid #FFA500;
+            border-bottom: 3px solid #FFA500;
+            border-left: 3px solid #FFFF99;
+            border-right: 3px solid #FFFF99;
+            box-shadow: 0 0 8px rgba(255, 165, 0, 0.6), 0 0 8px rgba(255, 255, 153, 0.6);
+        }
+        #dice-container {
+            margin: 20px 0;
+            color: white;
+        }
+        #dice {
+            font-size: 24px;
+            margin: 10px;
+            color: white;
+        }
+        #roll-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #roll-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #message {
+            font-size: 18px;
+            margin: 10px 0;
+            color: white;
+        }
+        #tile-indicator {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+            color: white;
+        }
+        #analogue-indicator {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px auto;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            border: 2px solid #333;
+            transition: background-color 0.3s ease;
+        }
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        #modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 300px;
+            text-align: center;
+            color: #333;
+        }
+        #modal-content input {
+            margin: 10px 0;
+            padding: 5px;
+            width: 80%;
+            font-size: 16px;
+        }
+        #modal-content button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+        }
+        #timer {
+            font-size: 16px;
+            font-weight: bold;
+            color: #FF0000;
+            margin: 10px 0;
+        }
+        .subscript {
+            font-size: 0.7em;
+            vertical-align: sub;
+        }
+        @media (max-width: 600px) {
+            #game-container {
+                max-width: 100%;
+                padding: 10px;
+            }
+            #board {
+                grid-template-columns: repeat(6, 1fr);
+                max-width: 100%;
+                margin: 20px auto;
+                padding: 8px;
+            }
+            .space {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 1/1;
+                font-size: 12px;
+                color: #333;
+            }
+            .space:nth-child(1),
+            .space:nth-child(6),
+            .space:nth-child(25),
+            .space:nth-child(30) {
+                border: 2px solid #000;
+                box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+            }
+            #dice {
+                font-size: 20px;
+                color: white;
+            }
+            #roll-btn {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+            #message, #tile-indicator {
+                font-size: 16px;
+                color: white;
+            }
+            #analogue-indicator {
+                width: 80px;
+                height: 80px;
+                font-size: 14px;
+                color: white;
+            }
+        }
+        @media (max-width: 400px) {
+            .space {
+                font-size: 10px;
+                color: #333;
+            }
+            #dice {
+                font-size: 18px;
+                color: white;
+            }
+            #roll-btn {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+            #message, #tile-indicator {
+                font-size: 14px;
+                color: white;
+            }
+            #analogue-indicator {
+                width: 60px;
+                height: 60px;
+                font-size: 12px;
+                color: white;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Symbolic Solver</h1>
+        <div id="board"></div>
+        <div id="dice-container">
+            <div id="dice">🎲 Roll: -</div>
+            <button id="roll-btn">Player 1 Roll Dice</button>
+        </div>
+        <div id="message"></div>
+        <div id="tile-indicator">Player 1 is on a Blue Start Tile | Player 2 is on a Blue Start Tile</div>
+        <div id="analogue-indicator">Start</div>
+    </div>
+    <div id="modal">
+        <div id="modal-content">
+            <p id="task-question"></p>
+            <div id="timer">Time: 10</div>
+            <input type="text" id="task-answer" placeholder="Enter your answer">
+            <button id="submit-answer">Submit</button>
+        </div>
+    </div>
+    <script>
+        const boardSize = 30;
+        const spaces = [
+            { type: 'start', label: 'Start' },
+            { type: 'element', question: 'Write the symbol for Sodium.', answer: 'Na' },
+            { type: 'formula', question: 'Write the formula for Calcium Chloride.', answer: 'CaCl2' },
+            { type: 'challenge', question: 'Balance: H2 + O2 → H2O', answer: '2H2 + O2 → 2H2O' },
+            { type: 'penalty', action: 'Go back 2 spaces.' },
+            { type: 'element', question: 'Write the symbol for Calcium.', answer: 'Ca' },
+            { type: 'formula', question: 'Write the formula for Ammonia.', answer: 'NH3' },
+            { type: 'challenge', question: 'Balance: Na + Cl2 → NaCl', answer: '2Na + Cl2 → 2NaCl' },
+            { type: 'penalty', action: 'Go back 2 spaces.' },
+            { type: 'element', question: 'Write the symbol for Oxygen.', answer: 'O' },
+            { type: 'formula', question: 'Write the formula for Sodium Chloride.', answer: 'NaCl' },
+            { type: 'challenge', question: 'Balance: CH4 + O2 → CO2 + H2O', answer: 'CH4 + 2O2 → CO2 + 2H2O' },
+            { type: 'penalty', action: 'Go back 2 spaces.' },
+            { type: 'element', question: 'Write the symbol for Hydrogen.', answer: 'H' },
+            { type: 'formula', question: 'Write the formula for Water.', answer: 'H2O' },
+            { type: 'challenge', question: 'Balance: N2 + H2 → NH3', answer: 'N2 + 3H2 → 2NH3' },
+            { type: 'penalty', action: 'Go back 2 spaces.' },
+            { type: 'element', question: 'Write the symbol for Carbon.', answer: 'C' },
+            { type: 'formula', question: 'Write the formula for Carbon Dioxide.', answer: 'CO2' },
+            { type: 'challenge', question: 'Balance: Fe + O2 → Fe2O3', answer: '4Fe + 3O2 → 2Fe2O3' },
+            { type: 'penalty', action: 'Go back 2 spaces.' },
+            { type: 'element', question: 'Write the symbol for Nitrogen.', answer: 'N' },
+            { type: 'formula', question: 'Write the formula for Magnesium Oxide.', answer: 'MgO' },
+            { type: 'challenge', question: 'Balance: Al + O2 → Al2O3', answer: '4Al + 3O2 → 2Al2O3' },
+            { type: 'penalty', action: 'Go back 2 spaces.' },
+            { type: 'element', question: 'Write the symbol for Chlorine.', answer: 'Cl' },
+            { type: 'formula', question: 'Write the formula for Potassium Hydroxide.', answer: 'KOH' },
+            { type: 'challenge', question: 'Balance: C2H6 + O2 → CO2 + H2O', answer: '2C2H6 + 7O2 → 4CO2 + 6H2O' },
+            { type: 'penalty', action: 'Go back 2 spaces.' },
+            { type: 'finish', label: 'Finish', question: 'Write the formula for Aluminum Sulfate.', answer: 'Al2(SO4)3' }
+        ];
+
+        let playerPositions = [0, 0];
+        let currentPlayer = 0;
+        let gameOver = false;
+        let questionAskedThisTurn = false;
+        let timerInterval = null;
+        let timeLeft = 10;
+
+        const board = document.getElementById('board');
+        const diceDisplay = document.getElementById('dice');
+        const rollBtn = document.getElementById('roll-btn');
+        const message = document.getElementById('message');
+        const tileIndicator = document.getElementById('tile-indicator');
+        const analogueIndicator = document.getElementById('analogue-indicator');
+        const modal = document.getElementById('modal');
+        const taskQuestion = document.getElementById('task-question');
+        const taskAnswer = document.getElementById('task-answer');
+        const submitAnswer = document.getElementById('submit-answer');
+        const timerDisplay = document.getElementById('timer');
+
+        function createBoard() {
+            spaces.forEach((space, index) => {
+                const spaceDiv = document.createElement('div');
+                spaceDiv.classList.add('space', space.type);
+                spaceDiv.textContent = space.label || index + 1;
+                if (space.type === 'formula' || space.type === 'challenge') {
+                    spaceDiv.innerHTML = spaceDiv.textContent.replace(/(\d+)/g, '<span class="subscript">$1</span>');
+                }
+                board.appendChild(spaceDiv);
+            });
+            updateTileIndicators();
+        }
+
+        function rollDice() {
+            return Math.floor(Math.random() * 6) + 1;
+        }
+
+        function updateTileIndicators() {
+            Array.from(board.children).forEach(space => {
+                space.classList.remove('player1', 'player2', 'both-players');
+            });
+
+            const pos1 = playerPositions[0];
+            const pos2 = playerPositions[1];
+            if (pos1 === pos2) {
+                board.children[pos1].classList.add('both-players');
+            } else {
+                board.children[pos1].classList.add('player1');
+                board.children[pos2].classList.add('player2');
+            }
+
+            const space1 = spaces[pos1];
+            const space2 = spaces[pos2];
+            let tileType1 = space1.type.charAt(0).toUpperCase() + space1.type.slice(1);
+            let tileType2 = space2.type.charAt(0).toUpperCase() + space2.type.slice(1);
+            let color1 = '';
+            let color2 = '';
+            let bgColor = '';
+            switch (space1.type) {
+                case 'start': color1 = 'Blue'; break;
+                case 'element': color1 = 'Gray'; break;
+                case 'formula': color1 = 'Green'; break;
+                case 'challenge': color1 = 'Yellow'; break;
+                case 'penalty': color1 = 'Red'; break;
+                case 'finish': color1 = 'Gold'; break;
+            }
+            switch (space2.type) {
+                case 'start': color2 = 'Blue'; break;
+                case 'element': color2 = 'Gray'; break;
+                case 'formula': color2 = 'Green'; break;
+                case 'challenge': color2 = 'Yellow'; break;
+                case 'penalty': color2 = 'Red'; break;
+                case 'finish': color2 = 'Gold'; break;
+            }
+            switch (spaces[playerPositions[currentPlayer]].type) {
+                case 'start': bgColor = '#00BFFF'; break;
+                case 'element': bgColor = '#d3d3d3'; break;
+                case 'formula': bgColor = '#90EE90'; break;
+                case 'challenge': bgColor = '#FFFFE0'; break;
+                case 'penalty': bgColor = '#FF6347'; break;
+                case 'finish': bgColor = '#FFD700'; break;
+            }
+            tileIndicator.textContent = `Player 1 is on a ${color1} ${tileType1} Tile | Player 2 is on a ${color2} ${tileType2} Tile`;
+            analogueIndicator.textContent = spaces[playerPositions[currentPlayer]].type.charAt(0).toUpperCase() + spaces[playerPositions[currentPlayer]].type.slice(1);
+            analogueIndicator.style.backgroundColor = bgColor;
+        }
+
+        function movePlayer(playerIndex, spacesToMove) {
+            playerPositions[playerIndex] = Math.min(Math.max(playerPositions[playerIndex] + spacesToMove, 0), boardSize - 1);
+            updateTileIndicators();
+        }
+
+        function startTimer(tileType, callback) {
+            timeLeft = tileType === 'element' ? 10 : tileType === 'formula' ? 15 : 30;
+            timerDisplay.textContent = `Time: ${timeLeft}`;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `Time: ${timeLeft}`;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    modal.style.display = 'none';
+                    message.textContent = `Player ${currentPlayer + 1}: Time's up! Go back 1 space.`;
+                    movePlayer(currentPlayer, -1);
+                    switchTurn();
+                    rollBtn.disabled = false;
+                    callback(null);
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function showModal(question, tileType, callback) {
+            taskQuestion.textContent = `Player ${currentPlayer + 1}: ${question}`;
+            taskAnswer.value = '';
+            modal.style.display = 'flex';
+            startTimer(tileType, callback);
+            submitAnswer.onclick = () => {
+                stopTimer();
+                callback(taskAnswer.value.trim());
+                modal.style.display = 'none';
+            };
+        }
+
+        function switchTurn() {
+            questionAskedThisTurn = false;
+            currentPlayer = 1 - currentPlayer;
+            rollBtn.textContent = `Player ${currentPlayer + 1} Roll Dice`;
+            updateTileIndicators();
+        }
+
+        function resolveSpace() {
+            if (gameOver) return;
+
+            const space = spaces[playerPositions[currentPlayer]];
+            const playerNum = currentPlayer + 1;
+
+            if (space.type === 'penalty') {
+                message.textContent = `Player ${playerNum}: Penalty! Go back 2 spaces.`;
+                movePlayer(currentPlayer, -2);
+                setTimeout(() => {
+                    switchTurn();
+                    rollBtn.disabled = false;
+                }, 500);
+            } else if ((space.type === 'element' || space.type === 'formula' || space.type === 'challenge') && !questionAskedThisTurn) {
+                questionAskedThisTurn = true;
+                showModal(space.question, space.type, (answer) => {
+                    if (answer === null) return; // Timer ran out, handled in startTimer
+                    if (answer === space.answer) {
+                        message.textContent = `Player ${playerNum}: Correct!`;
+                    } else {
+                        message.textContent = `Player ${playerNum}: Incorrect. Go back 1 space.`;
+                        movePlayer(currentPlayer, -1);
+                    }
+                    switchTurn();
+                    rollBtn.disabled = false;
+                });
+            } else if (space.type === 'finish' && !questionAskedThisTurn) {
+                questionAskedThisTurn = true;
+                showModal(space.question, 'challenge', (answer) => {
+                    if (answer === null) return; // Timer ran out, handled in startTimer
+                    if (answer === space.answer) {
+                        message.textContent = `Congratulations! Player ${playerNum} wins Symbolic Solver!`;
+                        gameOver = true;
+                    } else {
+                        message.textContent = `Player ${playerNum}: Incorrect. Try again on your next turn.`;
+                        switchTurn();
+                        rollBtn.disabled = false;
+                    }
+                });
+            } else {
+                switchTurn();
+                rollBtn.disabled = false;
+            }
+        }
+
+        rollBtn.addEventListener('click', () => {
+            if (gameOver) return;
+            questionAskedThisTurn = false;
+            const roll = rollDice();
+            diceDisplay.textContent = `🎲 Roll: ${roll}`;
+            rollBtn.disabled = true;
+            movePlayer(currentPlayer, roll);
+            resolveSpace();
+        });
+
+        createBoard();
+        updateTileIndicators();
+    </script>
+</body>
+</html>
